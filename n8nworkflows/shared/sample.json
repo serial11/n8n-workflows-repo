@@ -66,7 +66,6 @@
       "name": "Simple Memory"
     }
   ],
-  "pinData": {},
   "connections": {
     "When chat message received": {
       "main": [
@@ -102,15 +101,7 @@
       ]
     }
   },
-  "active": false,
   "settings": {
     "executionOrder": "v1"
-  },
-  "versionId": "1006a1a5-797e-4564-be6d-a6355caa3142",
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "d25ac432c1de2bf3cf6c6a67f87121bffb4314c5b79889a5265f9e9660ef1919"
-  },
-  "id": "lS9dta8YZKeLmPYU",
-  "tags": []
+  }
 }
