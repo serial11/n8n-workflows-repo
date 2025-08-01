@@ -1,0 +1,397 @@
+{
+  "meta": {
+    "instanceId": "n8n-research-assistant"
+  },
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "trigger-start",
+      "name": "Research Question Input",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        260,
+        300
+      ],
+      "notes": "Click to start research with your initial question"
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "user",
+              "message": "=You are a research assistant. Based on this research question: \"{{ $json.research_question || 'Please provide a research question' }}\"\n\nGenerate 2-3 clarifying questions to refine the research scope. Then create optimized search queries for different source types.\n\nReturn your response as JSON in this exact format:\n{\n  \"clarifying_questions\": [\n    \"Question 1 to refine scope?\",\n    \"Question 2 about timeframe/geography?\",\n    \"Question 3 about specific aspects?\"\n  ],\n  \"refined_scope\": \"Refined research question based on assumptions\",\n  \"search_queries\": [\n    {\n      \"type\": \"academic\",\n      \"query\": \"academic search query\",\n      \"focus\": \"peer-reviewed research and studies\"\n    },\n    {\n      \"type\": \"industry\",\n      \"query\": \"industry analysis query\",\n      \"focus\": \"market reports and industry insights\"\n    },\n    {\n      \"type\": \"news\",\n      \"query\": \"current news query\",\n      \"focus\": \"recent developments and trends\"\n    },\n    {\n      \"type\": \"government\",\n      \"query\": \"official sources query\",\n      \"focus\": \"government reports and official data\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.7,
+          "maxTokens": 1000
+        }
+      },
+      "id": "clarify-questions",
+      "name": "Generate Clarifying Questions",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        480,
+        300
+      ],
+      "notes": "AI generates clarifying questions and search strategies"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "search_queries",
+        "include": "allOtherFields"
+      },
+      "id": "split-searches",
+      "name": "Split Search Queries",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        700,
+        300
+      ],
+      "notes": "Split into parallel search branches"
+    },
+    {
+      "parameters": {
+        "url": "https://api.tavily.com/search",
+        "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "api_key",
+              "value": "={{ $vars.TAVILY_API_KEY }}"
+            },
+            {
+              "name": "query",
+              "value": "={{ $json.query }}"
+            },
+            {
+              "name": "search_depth",
+              "value": "advanced"
+            },
+            {
+              "name": "include_answer",
+              "value": true
+            },
+            {
+              "name": "include_domains",
+              "value": "={{ $json.type === 'academic' ? ['scholar.google.com', 'pubmed.ncbi.nlm.nih.gov', 'arxiv.org', 'jstor.org', 'springer.com', 'elsevier.com'] : $json.type === 'government' ? ['gov', 'edu'] : [] }}"
+            },
+            {
+              "name": "max_results",
+              "value": 5
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "tavily-search",
+      "name": "Tavily Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        200
+      ],
+      "notes": "Search via Tavily API with source filtering"
+    },
+    {
+      "parameters": {
+        "model": "sonar-deep-research",
+        "messages": {
+          "values": [
+            {
+              "role": "user",
+              "message": "=Research this question with citations: {{ $json.query }}\n\nFocus on: {{ $json.focus }}\n\nProvide detailed analysis with source citations and publication dates."
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 2000
+        }
+      },
+      "id": "perplexity-search",
+      "name": "Perplexity Deep Research",
+      "type": "n8n-nodes-base.perplexity",
+      "typeVersion": 1,
+      "position": [
+        920,
+        400
+      ],
+      "notes": "Deep research with built-in citations"
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "outputDataFrom": "both"
+      },
+      "id": "merge-results",
+      "name": "Merge Search Results",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1200,
+        300
+      ],
+      "notes": "Combine results from all search sources"
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "user",
+              "message": "=You are a source credibility analyst. Analyze these search results and assign credibility scores:\n\n{{ JSON.stringify($input.all(), null, 2) }}\n\nFor each source, evaluate:\n1. Authority & Expertise (domain reputation, author credentials)\n2. Publication Date (recency, relevance)\n3. Peer Review Status (academic review, editorial oversight)\n4. Citation Count & Impact\n5. Bias & Objectivity\n\nReturn JSON format:\n{\n  \"sources\": [\n    {\n      \"url\": \"source_url\",\n      \"title\": \"source_title\",\n      \"credibility_score\": 85,\n      \"credibility_factors\": {\n        \"authority\": 90,\n        \"recency\": 80,\n        \"peer_review\": 95,\n        \"citations\": 75,\n        \"objectivity\": 85\n      },\n      \"source_type\": \"academic|news|industry|government\",\n      \"reliability_notes\": \"Key factors affecting credibility\"\n    }\n  ],\n  \"overall_source_quality\": \"high|medium|low\",\n  \"quality_summary\": \"Overall assessment of source reliability\"\n}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.2,
+          "maxTokens": 2000
+        }
+      },
+      "id": "validate-sources",
+      "name": "Source Credibility Analysis",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1420,
+        300
+      ],
+      "notes": "AI-powered source validation and scoring"
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "user",
+              "message": "=You are a research synthesis expert. Analyze these validated sources and create a comprehensive synthesis:\n\nSOURCE CREDIBILITY DATA:\n{{ $('Source Credibility Analysis').item.json.message.content }}\n\nORIGINAL SEARCH RESULTS:\n{{ JSON.stringify($('Merge Search Results').all(), null, 2) }}\n\nPerform these analyses:\n1. **Synthesize Key Findings**: Combine insights from all sources\n2. **Identify Conflicting Information**: Highlight disagreements between sources\n3. **Cross-Reference Validation**: Check claims across multiple sources\n4. **Gap Analysis**: Identify missing information or research areas\n\nReturn JSON format:\n{\n  \"synthesis\": {\n    \"key_findings\": [\n      \"Finding 1 with supporting sources\",\n      \"Finding 2 with evidence strength\"\n    ],\n    \"consensus_points\": [\"Points where sources agree\"],\n    \"conflicting_information\": [\n      {\n        \"topic\": \"Area of disagreement\",\n        \"source_1\": {\"claim\": \"Claim A\", \"source\": \"Source name\", \"credibility\": 85},\n        \"source_2\": {\"claim\": \"Claim B\", \"source\": \"Source name\", \"credibility\": 75},\n        \"analysis\": \"Explanation of conflict and likely resolution\"\n      }\n    ],\n    \"evidence_strength\": \"strong|moderate|weak\",\n    \"confidence_level\": 85\n  },\n  \"research_gaps\": [\n    \"Gap 1: Missing longitudinal data\",\n    \"Gap 2: Limited geographic coverage\"\n  ],\n  \"methodology_notes\": \"How sources were weighted and analyzed\"\n}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 3000
+        }
+      },
+      "id": "synthesize-findings",
+      "name": "Synthesis & Conflict Analysis",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1640,
+        300
+      ],
+      "notes": "Advanced synthesis with conflict detection"
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "user",
+              "message": "=Based on the research synthesis, generate strategic follow-up research suggestions:\n\nRESEARCH SYNTHESIS:\n{{ $('Synthesis & Conflict Analysis').item.json.message.content }}\n\nORIGINAL QUESTION SCOPE:\n{{ $('Generate Clarifying Questions').item.json.message.content }}\n\nGenerate targeted follow-up research suggestions:\n\nReturn JSON format:\n{\n  \"follow_up_research\": {\n    \"priority_questions\": [\n      {\n        \"question\": \"High-priority research question\",\n        \"rationale\": \"Why this question is important\",\n        \"priority\": \"high|medium|low\",\n        \"estimated_effort\": \"low|medium|high\",\n        \"potential_sources\": [\"Suggested source types\"]\n      }\n    ],\n    \"research_methodologies\": [\n      \"Suggested research approaches for deeper investigation\"\n    ],\n    \"expert_interviews\": [\n      \"Types of experts to consult for primary research\"\n    ],\n    \"longitudinal_opportunities\": [\n      \"Areas where tracking changes over time would be valuable\"\n    ]\n  },\n  \"automation_suggestions\": [\n    \"How to set up ongoing monitoring for this topic\"\n  ]\n}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.6,
+          "maxTokens": 2000
+        }
+      },
+      "id": "generate-followups",
+      "name": "Generate Follow-up Suggestions",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1860,
+        300
+      ],
+      "notes": "Strategic next steps for continued research"
+    },
+    {
+      "parameters": {
+        "resource": "text",
+        "operation": "message",
+        "modelId": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "user",
+              "message": "=Create the final comprehensive research report combining all analyses:\n\nORIGINAL RESEARCH REQUEST:\n{{ $('Research Question Input').item.json.research_question || 'Research question from input' }}\n\nCLARIFYING QUESTIONS & SCOPE:\n{{ $('Generate Clarifying Questions').item.json.message.content }}\n\nSOURCE CREDIBILITY ANALYSIS:\n{{ $('Source Credibility Analysis').item.json.message.content }}\n\nRESEARCH SYNTHESIS:\n{{ $('Synthesis & Conflict Analysis').item.json.message.content }}\n\nFOLLOW-UP SUGGESTIONS:\n{{ $('Generate Follow-up Suggestions').item.json.message.content }}\n\nCreate a comprehensive, professional research report in structured format:\n\nReturn JSON format:\n{\n  \"research_report\": {\n    \"metadata\": {\n      \"original_question\": \"The initial research question\",\n      \"scope_refinement\": \"How the scope was refined\",\n      \"research_date\": \"{{ new Date().toISOString() }}\",\n      \"total_sources\": 0,\n      \"search_strategy\": \"Multi-source parallel search approach\",\n      \"confidence_rating\": 85\n    },\n    \"executive_summary\": \"Concise overview of key findings and conclusions\",\n    \"key_findings\": [\n      {\n        \"finding\": \"Primary finding statement\",\n        \"evidence_level\": \"strong|moderate|weak\",\n        \"supporting_sources\": [\"Source citations\"],\n        \"confidence\": 90\n      }\n    ],\n    \"conflicting_evidence\": [\n      {\n        \"topic\": \"Area of disagreement\",\n        \"conflicting_claims\": [\"Different claims found\"],\n        \"resolution_analysis\": \"How conflicts were analyzed\",\n        \"recommended_interpretation\": \"Best interpretation given evidence\"\n      }\n    ],\n    \"source_analysis\": {\n      \"total_sources_evaluated\": 0,\n      \"high_credibility_sources\": 0,\n      \"source_diversity\": \"academic, industry, news, government\",\n      \"overall_source_quality\": \"high|medium|low\",\n      \"credibility_distribution\": {\n        \"90-100\": 0,\n        \"80-89\": 0,\n        \"70-79\": 0,\n        \"below_70\": 0\n      }\n    },\n    \"research_limitations\": [\n      \"Identified gaps or limitations in available research\"\n    ],\n    \"recommendations\": [\n      \"Actionable recommendations based on findings\"\n    ],\n    \"next_steps\": {\n      \"immediate_actions\": [\"What to do next\"],\n      \"deeper_research\": [\"Areas requiring more investigation\"],\n      \"monitoring_setup\": [\"How to track ongoing developments\"]\n    },\n    \"complete_source_list\": [\n      {\n        \"title\": \"Source title\",\n        \"url\": \"Source URL\",\n        \"type\": \"academic|industry|news|government\",\n        \"credibility_score\": 85,\n        \"key_contribution\": \"What this source contributed\",\n        \"publication_date\": \"When published\",\n        \"author_organization\": \"Who published it\"\n      }\n    ]\n  }\n}"
+            }
+          ]
+        },
+        "options": {
+          "temperature": 0.2,
+          "maxTokens": 4000
+        }
+      },
+      "id": "final-report",
+      "name": "Generate Final Report",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        2080,
+        300
+      ],
+      "notes": "Comprehensive research report with confidence ratings"
+    }
+  ],
+  "connections": {
+    "Research Question Input": {
+      "main": [
+        [
+          {
+            "node": "Generate Clarifying Questions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Clarifying Questions": {
+      "main": [
+        [
+          {
+            "node": "Split Search Queries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Search Queries": {
+      "main": [
+        [
+          {
+            "node": "Tavily Search",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Perplexity Deep Research",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tavily Search": {
+      "main": [
+        [
+          {
+            "node": "Merge Search Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perplexity Deep Research": {
+      "main": [
+        [
+          {
+            "node": "Merge Search Results",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Search Results": {
+      "main": [
+        [
+          {
+            "node": "Source Credibility Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Source Credibility Analysis": {
+      "main": [
+        [
+          {
+            "node": "Synthesis & Conflict Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Synthesis & Conflict Analysis": {
+      "main": [
+        [
+          {
+            "node": "Generate Follow-up Suggestions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Follow-up Suggestions": {
+      "main": [
+        [
+          {
+            "node": "Generate Final Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": {
+      "enabled": false
+    }
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-31T10:00:00.000Z",
+      "updatedAt": "2025-01-31T10:00:00.000Z",
+      "id": "research-automation",
+      "name": "Research Automation"
+    }
+  ],
+  "triggerCount": 1,
+  "active": false
+}
