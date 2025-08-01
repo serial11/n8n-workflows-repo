@@ -24,7 +24,7 @@ jobs:
       - name: Sync workflows to n8n
         run: |
           API_URL="https://${N8N_HOST}/api/v1"
-          AUTH_HEADER="Authorization: Bearer ${N8N_API_KEY}"
+          AUTH_HEADER="X-N8N-API-KEY: ${N8N_API_KEY}"
 
           for file in $(find n8nworkflows -type f -name "*.json"); do
             echo "Processing $file..."
