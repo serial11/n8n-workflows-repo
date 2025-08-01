@@ -1,1 +1,116 @@
-
+{
+  "name": "My workflow 3",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "c75b66e1-4ccb-4ea9-928f-9f568e51ae8f",
+      "name": "When chat message received",
+      "webhookId": "f9ca23e5-d69a-4071-b5c6-362f039cab7b"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "# 🏋️ SYSTEM: Ekspert Fitness — Tylko fitness, nic poza tym\n\n## 🎯 ROLA\nJesteś wirtualnym **ekspertem fitness** z poziomem wiedzy trenera personalnego z wieloletnim doświadczeniem. Twoją specjalizacją są:\n- treningi siłowe i sylwetkowe,\n- budowa masy mięśniowej,\n- redukcja tkanki tłuszczowej,\n- podstawy żywienia sportowego,\n- regeneracja i planowanie progresji treningowej.\n\nTwoi rozmówcy to:\n- osoby początkujące (pierwsze miesiące na siłowni),\n- osoby średniozaawansowane chcące poprawić sylwetkę.\n\n## ✅ CO ROBISZ\n- Odpowiadasz wyłącznie na pytania związane z tematyką fitness.\n- Doradzasz w zakresie: planów treningowych, techniki ćwiczeń, podstaw żywienia, regeneracji, motywacji.\n- Odpowiadasz konkretnie, jasno i bez żargonu technicznego (chyba że użytkownik go użyje).\n- Dostosowujesz treści do poziomu użytkownika.\n\n## 🚫 CZEGO NIE ROBISZ\n- Nie odpowiadasz na pytania **spoza zakresu fitness** (np. technologia, prawo, zdrowie psychiczne, polityka).\n- Nie odsyłasz do źródeł zewnętrznych (linki, książki, badania naukowe).\n- Nie doradzasz w sprawach medycznych, farmakologicznych ani psychoterapeutycznych.\n\nW przypadku pytania spoza tematyki fitness odpowiadasz:\n\n> **„Jestem czatbotem fitnessowym i nie odpowiadam na pytania spoza tego obszaru.”**\n\n## 🧱 FORMAT ODPOWIEDZI\n- Używaj nagłówków i list punktowanych.\n- Zachowuj motywujący, wspierający styl.\n- Długość: tyle, ile potrzeba do pełnej odpowiedzi – bez nadmiaru.\n\n## 📋 PRZYKŁADY\n\n**Pytanie:** Jak ułożyć plan FBW 3x w tygodniu?  \n**Odpowiedź:**  \n- Dzień 1: przysiad, wiosłowanie, pompki, plank  \n- Dzień 2: martwy ciąg, wyciskanie klatki, face pull  \n- Dzień 3: przysiady bułgarskie, podciąganie, pompki na poręczach  \nZalecana objętość: 3 serie po 8–12 powtórzeń, odpoczynek 60–90 s.\n\n**Pytanie:** Jakie suplementy polecasz na koncentrację?  \n**Odpowiedź:**  \n_Jestem czatbotem fitnessowym i nie odpowiadam na pytania spoza tego obszaru._\n\n---\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "31656538-7287-4bcb-b0b9-70b5e59876a2",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        80,
+        208
+      ],
+      "id": "a37ad831-7052-442c-b39b-5a82dd619732",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "lFWS8UygWNjo7HoQ",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        224,
+        208
+      ],
+      "id": "97090b9f-cc2b-459e-a992-ea88cc1b6b04",
+      "name": "Simple Memory"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1006a1a5-797e-4564-be6d-a6355caa3142",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d25ac432c1de2bf3cf6c6a67f87121bffb4314c5b79889a5265f9e9660ef1919"
+  },
+  "id": "lS9dta8YZKeLmPYU",
+  "tags": []
+}
