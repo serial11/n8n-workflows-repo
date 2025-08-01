@@ -1,8 +1,5 @@
 {
   "name": "Assistant",
-  "meta": {
-    "instanceId": "n8n-research-assistant"
-  },
   "nodes": [
     {
       "parameters": {},
@@ -383,16 +380,5 @@
     "errorWorkflow": {
       "enabled": false
     }
-  },
-  "staticData": null,
-  "tags": [
-    {
-      "createdAt": "2025-01-31T10:00:00.000Z",
-      "updatedAt": "2025-01-31T10:00:00.000Z",
-      "id": "research-automation",
-      "name": "Research Automation"
-    }
-  ],
-  "triggerCount": 1,
-  "active": false
+  }
 }
