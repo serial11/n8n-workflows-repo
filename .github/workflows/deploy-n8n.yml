@@ -26,7 +26,7 @@ jobs:
           API_URL="https://${N8N_HOST}/api/v1"
           AUTH_HEADER="Authorization: Bearer ${N8N_API_KEY}"
 
-          for file in $(find workflows -type f -name "*.json"); do
+          for file in $(find n8nworkflows -type f -name "*.json"); do
             echo "Processing $file..."
             WORKFLOW_NAME=$(jq -r '.name' "$file")
 
