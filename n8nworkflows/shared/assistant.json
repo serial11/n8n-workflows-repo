@@ -1,4 +1,5 @@
 {
+  "name": "Assistant",
   "meta": {
     "instanceId": "n8n-research-assistant"
   },
