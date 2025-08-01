@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'workflows/**/*.json'
+      - 'n8nworkflows/**/*.json'
 
 jobs:
   deploy:
