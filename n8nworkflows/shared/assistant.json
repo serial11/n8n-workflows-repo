@@ -2,7 +2,7 @@
   "name": "Assistant",
   "nodes": [
     {
-      "parameters": {},
+      "parameters": {"options": {}},
       "id": "trigger-start",
       "name": "Research Question Input",
       "type": "n8n-nodes-base.manualTrigger",
@@ -43,6 +43,7 @@
     },
     {
       "parameters": {
+        "options": {},
         "fieldToSplitOut": "search_queries",
         "include": "allOtherFields"
       },
@@ -141,6 +142,7 @@
     },
     {
       "parameters": {
+        "options": {},
         "mode": "append",
         "outputDataFrom": "both"
       },
